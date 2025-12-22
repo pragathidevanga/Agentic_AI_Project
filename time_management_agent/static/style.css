@@ -1,0 +1,36 @@
+body {
+    font-family: "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #314d8e, #7e9ee8);
+    margin: 0;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 25px;
+}
+
+h1 { color: white; font-size: 36px; }
+.subtitle { color: white; margin-bottom: 25px; }
+
+.card {
+    background: white; padding: 25px; border-radius: 12px;
+    margin-bottom: 25px; box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+}
+
+label { font-size: 18px; font-weight: 600; }
+input, select, button { width: 100%; padding: 14px; margin-top: 10px; font-size: 18px; }
+button { background: #4e5eebdb; color: white; border: none; border-radius: 8px; cursor: pointer; }
+button:hover { background: #4e5eebdb; }
+
+table { width: 100%; border-collapse: collapse; font-size: 18px; }
+th { background: #4e5eebdb; color: white; padding: 14px; }
+td { padding: 14px; border-bottom: 1px solid #ddd; }
+
+.day-title { font-size: 20px; font-weight: bold; margin-top: 15px; }
+.suggestion-text { font-size: 18px; margin-left: 10px; }
+
+@media (max-width: 768px) {
+    h1 { font-size: 26px; }
+    table { font-size: 16px; }
+}

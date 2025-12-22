@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Time Management Agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6a5acd, #836fff);
+}
+.header {
+    text-align: center;
+    color: white;
+    padding: 30px;
+}
+.header h1 {
+    margin: 0;
+    font-size: 34px;
+}
+.header p {
+    margin-top: 8px;
+    font-size: 16px;
+    opacity: 0.9;
+}
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+}
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 12px;
+}
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+button {
+    background: #6a5acd;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 15px;
+}
+button:hover {
+    background: #5a4acb;
+}
+.day-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 20px;
+    color: #4b3fcf;
+}
+.actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.timer-box {
+    text-align: center;
+}
+#timerDisplay {
+    font-size: 30px;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .container { padding: 12px; }
+    .header h1 { font-size: 24px; }
+    .header p { font-size: 14px; }
+    .card { padding: 18px; }
+    input, select, button { font-size: 14px; padding: 10px; }
+    .actions { flex-direction: column; }
+    #timerDisplay { font-size: 22px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>📘 Time Management Agent</h1>
+    <p>AI-powered smart study planner for students</p>
+</div>
+
+<div class="container">
+
+<!-- INPUT FORM -->
+<div class="card">
+<form method="POST">
+    <label>Name</label>
+    <input type="text" name="name" required>
+
+    <label>Subjects (comma separated)</label>
+    <input type="text" name="subjects" placeholder="DBMS, Python, Data Science" required>
+
+    <label>Daily Study Hours</label>
+    <input type="number" name="hours" required>
+
+    <label>Goal</label>
+    <input type="text" name="goal" placeholder="Prepare for exams in 14 days" required>
+
+    <label>Mode</label>
+    <select name="mode">
+        <option value="offline">Offline (Ollama)</option>
+        <option value="online">Online (Gemini)</option>
+    </select>
+
+    <button type="submit">Generate Timetable</button>
+</form>
+</div>
+
+<!-- USER DETAILS -->
+{% if user %}
+<div class="card">
+    <h3>👤 Study Profile</h3>
+    <p><b>Name:</b> {{ user.name }}</p>
+    <p><b>Goal:</b> {{ user.goal }}</p>
+    <p><b>Daily Study Hours:</b> {{ user.hours }}</p>
+    <p><b>Subjects:</b> {{ user.subjects }}</p>
+</div>
+{% endif %}
+
+<!-- TIMETABLE -->
+{% if timetable %}
+<div class="card">
+    <h3>📅 Daily Subject-wise Study Plan</h3>
+
+    {% for day in timetable %}
+        <div class="day-title">{{ day.day }}</div>
+        <ul>
+        {% for session in day.sessions %}
+            <li>{{ session.time }} — {{ session.subject }}</li>
+        {% endfor %}
+        </ul>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- AI SUGGESTIONS -->
+{% if ai_plan %}
+<div class="card">
+    <h3>🤖 AI Study Suggestions</h3>
+    <ul>
+    {% for line in ai_plan %}
+        {% if "Monday" in line or "Tuesday" in line or "Wednesday" in line or "Thursday" in line or "Friday" in line or "Saturday" in line or "Sunday" in line %}
+            <li><b>{{ line }}</b></li>
+        {% else %}
+            <li>{{ line }}</li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- ACTION BUTTONS -->
+{% if timetable %}
+<div class="card actions">
+    <button onclick="saveProgress()">💾 Save Progress</button>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+    <form method="POST" action="/replan">
+        <input type="hidden" name="name" value="{{ user.name }}">
+        <input type="hidden" name="subjects" value="{{ user.subjects }}">
+        <input type="hidden" name="hours" value="{{ user.hours }}">
+        <input type="hidden" name="goal" value="{{ user.goal }}">
+        <input type="hidden" name="mode" value="offline">
+        <button type="submit">🔄 Replan Timetable</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- COUNTDOWN TIMER -->
+<div class="card timer-box">
+    <h3>⏳ Countdown Timer</h3>
+    <input type="text" id="countdownInput" placeholder="HH:MM:SS (eg: 01:30:00)">
+    <button type="button" onclick="startCountdown()">Start Countdown</button>
+    <div id="timerDisplay">00:00:00</div>
+</div>
+
+<audio id="alarmSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+</audio>
+
+</div>
+
+<script>
+let timerInterval = null;
+
+if ("Notification" in window && Notification.permission !== "granted") {
+    Notification.requestPermission();
+}
+
+function startCountdown() {
+    clearInterval(timerInterval);
+
+    const input = document.getElementById("countdownInput").value.trim();
+    const display = document.getElementById("timerDisplay");
+    const alarm = document.getElementById("alarmSound");
+
+    if (!input.match(/^\d{2}:\d{2}:\d{2}$/)) {
+        display.innerText = "Invalid Time Format";
+        return;
+    }
+
+    let [h, m, s] = input.split(":").map(Number);
+    let totalSeconds = h * 3600 + m * 60 + s;
+
+    if (totalSeconds <= 0) {
+        display.innerText = "Set a valid time";
+        return;
+    }
+
+    display.innerText = input;
+
+    timerInterval = setInterval(() => {
+        totalSeconds--;
+
+        let hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+        let mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+        let secs = String(totalSeconds % 60).padStart(2, "0");
+
+        display.innerText = `${hrs}:${mins}:${secs}`;
+
+        if (totalSeconds <= 0) {
+            clearInterval(timerInterval);
+            display.innerText = "Time Up ⏰";
+
+            /* 🔊 SOUND */
+            alarm.currentTime = 0;
+            alarm.play().catch(()=>{});
+
+            /* 🔔 NOTIFICATION */
+            if (Notification.permission === "granted") {
+                new Notification("Study Session Finished!", {
+                    body: "Great job! Take a break or start next task."
+                });
+            }
+        }
+    }, 1000);
+}
+
+function saveProgress() {
+    fetch("/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: "{{ user.name }}",
+            goal: "{{ user.goal }}",
+            hours: "{{ user.hours }}",
+            subjects: "{{ user.subjects }}",
+            timetable: {{ timetable | tojson }}
+        })
+    });
+}
+
+function exportPDF() {
+    window.location.href = "/export";
+}
+</script>
+
+</body>
+</html>
